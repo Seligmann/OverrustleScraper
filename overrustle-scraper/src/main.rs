@@ -7,10 +7,11 @@ use reqwest;
 
 fn main() {
     // scrape_all_overrustle();
-    scrape_per_user();
+    let ayo: &str = "/0Beagle";
+    scrape_per_user(&ayo.to_string());
 }
 
-fn scrape_per_user() {
+fn scrape_per_user(name: &String) {
     let months = vec![
         "January",
         "February",
@@ -62,13 +63,34 @@ fn scrape_per_user() {
                     if link.contains(month) {
                         for year in &years {
                             if link.contains(&year.to_string()) {
-                                let mut url: String = "https://overrustlelogs.net/Destinygg%20chatlog".to_owned();
+                                let mut url = String::new();
+                                url = "https://overrustlelogs.net/Destinygg%20chatlog".to_owned();
+                                let mut cloned_url = url.clone();
                                 let month_year: String = "/".to_owned() + *month + &*"%20".to_owned() + &*year.to_string();
                                 let userlogs: String = "/userlogs".to_owned();
                                 url.push_str(&month_year);
                                 // `url` returns a url of a similar format to https://overrustlelogs.net/Destinygg%20chatlog/December%202013/userlogs
                                 url.push_str(&userlogs);
-                                // println!("{}", url);
+
+                                // go through new url page and find requested username
+                                let resp = reqwest::blocking::get(url).unwrap();
+                                assert!(resp.status().is_success());
+
+                                Document::from_read(resp)
+                                    .unwrap()
+                                    .find(Name("a"))
+                                    .filter_map(|n| n.attr("href"))
+                                    .for_each(|link| {
+                                        if link.contains(name) {
+                                            let txt: String = ".txt".to_owned();
+                                            let user_file = name.to_owned();
+                                            cloned_url.push_str(&month_year);
+                                            cloned_url.push_str(&userlogs);
+                                            cloned_url.push_str(&user_file);
+                                            cloned_url.push_str(&txt);
+                                            cloned_url.clear();
+                                        }
+                                    })
                             }
                         }
                     }
