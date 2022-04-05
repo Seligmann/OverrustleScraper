@@ -6,10 +6,79 @@ use select::predicate::Name;
 use reqwest;
 
 fn main() {
-    scrape_overrustle();
+    // scrape_all_overrustle();
+    scrape_per_user();
 }
 
-fn scrape_overrustle() {
+fn scrape_per_user() {
+    let months = vec![
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+    ];
+    let months_map = HashMap::from([
+        ("January", "01"),
+        ("February", "02"),
+        ("March", "03"),
+        ("April", "04"),
+        ("May", "05"),
+        ("June", "06"),
+        ("July", "07"),
+        ("August", "08"),
+        ("September", "09"),
+        ("October", "10"),
+        ("November", "11"),
+        ("December", "12"),
+    ]);
+
+    let mut years: Vec<i32> = Vec::new();
+    for n in 2013..2070 {
+        years.push(n);
+    }
+
+
+    let url = "https://overrustlelogs.net/Destinygg%20chatlog";
+    let chatlog = "/Destinygg chatlog/";
+    let resp = reqwest::blocking::get(url).unwrap();
+    assert!(resp.status().is_success());
+
+    Document::from_read(resp)
+        .unwrap()
+        .find(Name("a"))
+        .filter_map(|n| n.attr("href"))
+        .for_each(|link| {
+            if link.contains(chatlog) {
+                // match month and year to form string for next url
+                for month in months.iter() {
+                    if link.contains(month) {
+                        for year in &years {
+                            if link.contains(&year.to_string()) {
+                                let mut url: String = "https://overrustlelogs.net/Destinygg%20chatlog".to_owned();
+                                let month_year: String = "/".to_owned() + *month + &*"%20".to_owned() + &*year.to_string();
+                                let userlogs: String = "/userlogs".to_owned();
+                                url.push_str(&month_year);
+                                // `url` returns a url of a similar format to https://overrustlelogs.net/Destinygg%20chatlog/December%202013/userlogs
+                                url.push_str(&userlogs);
+                                // println!("{}", url);
+                            }
+                        }
+                    }
+                }
+            }
+        })
+
+}
+
+fn scrape_all_overrustle() {
     let bad_hrefs = vec!["userlogs", "broadcaster", "subscribers", "bans", "top100"];
     let months = vec![
         "January",
