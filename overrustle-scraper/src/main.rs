@@ -1,9 +1,11 @@
-use std::io;
-use std::fs::File;
+use std::path::Path;
+use std::fs::{File, remove_file, self, DirEntry};
 use std::collections::HashMap;
 use select::document::Document;
 use select::predicate::Name;
 use reqwest;
+use std::io;
+use std::io::prelude::*;
 
 fn main() {
     // scrape_all_overrustle();
@@ -11,7 +13,8 @@ fn main() {
     scrape_per_user(&ayo.to_string());
 }
 
-fn scrape_per_user(name: &String) {
+fn scrape_per_user(name: &String) -> u32 {
+    let mut count = 0; // keep track of omegalul usage
     let months = vec![
         "January",
         "February",
@@ -88,7 +91,23 @@ fn scrape_per_user(name: &String) {
                                             cloned_url.push_str(&userlogs);
                                             cloned_url.push_str(&user_file);
                                             cloned_url.push_str(&txt);
+                                            download(&cloned_url, "placeholder");
+
+                                            // count occurances of "OMEGALUL"
+                                            if let Ok(lines) = read_lines("./placeholder") {
+                                                for line in lines {
+                                                    if let Ok(msg) = line {
+                                                        if msg.contains("OMEGALUL") {
+                                                            println!("{} has used OMEAGLUL {} times", name, count);
+                                                            count += 1;
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+
                                             cloned_url.clear();
+                                            remove_file("placeholder");
                                         }
                                     })
                             }
@@ -96,8 +115,9 @@ fn scrape_per_user(name: &String) {
                     }
                 }
             }
-        })
+        });
 
+    count
 }
 
 fn scrape_all_overrustle() {
@@ -206,4 +226,10 @@ fn download(url: &str, name: &str) {
     let body = resp.text().expect("Body is invalid");
     let mut out = File::create(name).expect("Failed to create file");
     io::copy(&mut body.as_bytes(), &mut out).expect("Failed to copy content");
+}
+
+fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+    where P: AsRef<Path>, {
+    let file = File::open(filename)?;
+    Ok(io::BufReader::new(file).lines())
 }
